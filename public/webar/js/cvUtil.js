@@ -234,10 +234,10 @@ var extractCameraFrame = function(localState) {
 };
 
 
-var sanityCheck = function(localState, p3D, actualP2D, sizeChess, frame) {
-    var cvState = localState.cv;
+var sanityCheck = function(coordMapping, localState, p3D, actualP2D, sizeChess,
+                           frame) {
     var arState = localState.ar;
-    var coordMap = nj.array(cvState.coordMapping, 'float32').reshape(4, 4)
+    var coordMap = nj.array(coordMapping, 'float32').reshape(4, 4)
             .transpose();
     var view = nj.array(arState.viewMatrix, 'float32').reshape(4, 4)
             .transpose();
@@ -329,8 +329,9 @@ exports.process = function(localState, gState, frame) {
 
     // Refresh browser to trigger calibration
     if ((counter % UPDATE_EVERY === 0) && (cvState.nSnapshots < MAX_SNAP) &&
-        (coordMapping === null) &&
-        gState.calibration && Array.isArray(gState.calibration.points2D)) {
+        (coordMapping === null) && gState.calibration &&
+        Array.isArray(gState.calibration.points2D)) {
+
         var t1 = (new Date()).getTime();
         var fr = extractCameraFrame(localState);
         if (fr !== null) {
@@ -395,10 +396,9 @@ exports.process = function(localState, gState, frame) {
                 var newCoordMapping = computeCoordMap(arState.poseModelMatrix,
                                                        viewMatrix);
                 console.log(newCoordMapping);
-                cvState.coordMapping = newCoordMapping;
 
-                var averageError = sanityCheck(localState, p3D, pointsArray,
-                                               sizeChess, fr);
+                var averageError = sanityCheck(newCoordMapping, localState, p3D,
+                                               pointsArray, sizeChess, fr);
                 var diag = distance(pointsArray[0], pointsArray[1],
                                     pointsArray[2*nPoints-2],
                                     pointsArray[2*nPoints-1]);
@@ -426,9 +426,6 @@ exports.process = function(localState, gState, frame) {
                     }
                 } else {
                     console.log('Ignoring bad frame.');
-                }
-                if (cvState.nSnapshots !== MAX_SNAP) {
-                    cvState.coordMapping = null;
                 }
 /*
                 var result = {
